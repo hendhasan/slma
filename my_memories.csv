@@ -1,0 +1,56 @@
+import streamlit as st
+import pandas as pd
+import os
+from datetime import datetime
+
+# --- إعدادات الأمان ---
+PASSWORD = "123" # قم بتغيير هذه الكلمة إلى كلمة سرك الخاصة
+
+def check_password():
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+    
+    if not st.session_state.authenticated:
+        st.title("🔐 الخزنة محمية")
+        pwd_input = st.text_input("أدخل كلمة المرور للدخول:", type="password")
+        if st.button("دخول"):
+            if pwd_input == PASSWORD:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("❌ كلمة المرور خاطئة!")
+        return False
+    return True
+
+# --- تشغيل التطبيق بعد التحقق ---
+if check_password():
+    st.set_page_config(page_title="خزنة المعنويات العالمية", page_icon="✨")
+    st.title("✨ خزنة المعنويات الخاصة بك")
+    
+    DB_FILE = "my_memories.csv"
+    if os.path.exists(DB_FILE):
+        data_df = pd.read_csv(DB_FILE)
+    else:
+        data_df = pd.DataFrame(columns=["التاريخ", "العنوان", "التصنيف", "الوصف", "الأثر"])
+
+    with st.form("my_form", clear_on_submit=True):
+        title = st.text_input("ما هو الشيء المعنوي؟")
+        category = st.selectbox("التصنيف", ["امتنان", "إنجاز", "ذكرى", "إلهام"])
+        description = st.text_area("الوصف:")
+        impact = st.slider("الأثر (1-10)", 1, 10, 5)
+        submitted = st.form_submit_button("حفظ دائم")
+
+    if submitted and title:
+        new_entry = {"التاريخ": datetime.now().strftime("%Y-%m-%d"), "العنوان": title, "التصنيف": category, "الوصف": description, "الأثر": impact}
+        data_df = pd.concat([data_df, pd.DataFrame([new_entry])], ignore_index=True)
+        data_df.to_csv(DB_FILE, index=False)
+        st.success("تم الحفظ!")
+        st.rerun()
+
+    if not data_df.empty:
+        st.write("---")
+        st.table(data_df)
+    
+    if st.sidebar.button("تسجيل الخروج"):
+        st.session_state.authenticated = False
+        st.rerun()
